@@ -1,0 +1,678 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+
+<HTML>
+
+
+<HEAD>
+
+  <TITLE> uwuheartxd </TITLE>
+
+  <META NAME="Generator" CONTENT="EditPlus">
+
+  <META NAME="Author" CONTENT="">
+
+  <META NAME="Keywords" CONTENT="">
+
+  <META NAME="Description" CONTENT="">
+
+
+
+  <style>
+
+    html,
+
+    body {
+
+      height: 100%;
+
+      padding: 0;
+
+      margin: 0;
+
+      background: #000;
+
+      display: flex;
+
+      justify-content: center;
+
+      align-items: center;
+
+
+    }
+
+
+    .box {
+
+      width: 100%;
+
+      position: absolute;
+
+      top: 50%;
+
+      left: 50%;
+
+      transform: translate(-50%, -50%);
+
+      display: flex;
+
+      flex-direction: column;
+
+    }
+
+
+    canvas {
+
+      position: absolute;
+
+      width: 100%;
+
+      height: 100%;
+
+    }
+
+
+    #pinkboard {
+
+      position: relative;
+
+      margin: auto;
+
+      height: 500px;
+
+      width: 500px;
+
+      animation: animate 1.3s infinite;
+
+    }
+
+
+    #pinkboard:before,
+
+    #pinkboard:after {
+
+      content: '';
+
+      position: absolute;
+
+      background: #FF5CA4;
+
+      width: 100px;
+
+      height: 160px;
+
+      border-top-left-radius: 50px;
+
+      border-top-right-radius: 50px;
+
+    }
+
+
+    #pinkboard:before {
+
+      left: 100px;
+
+      transform: rotate(-45deg);
+
+      transform-origin: 0 100%;
+
+      box-shadow: 0 14px 28px rgba(0, 0, 0, 0.25),
+
+        0 10px 10px rgba(0, 0, 0, 0.22);
+
+    }
+
+
+    #pinkboard:after {
+
+      left: 0;
+
+      transform: rotate(45deg);
+
+      transform-origin: 100% 100%;
+
+    }
+
+
+    @keyframes animate {
+
+      0% {
+
+        transform: scale(1);
+
+      }
+
+
+      30% {
+
+        transform: scale(.8);
+
+      }
+
+
+      60% {
+
+        transform: scale(1.2);
+
+      }
+
+
+      100% {
+
+        transform: scale(1);
+
+      }
+
+    }
+
+  </style>
+
+</HEAD>
+
+
+<BODY>
+
+  <div class="box">
+
+    <canvas id="pinkboard"></canvas>
+
+  </div>
+
+  <script>
+
+    /*
+
+   * Settings
+
+   */
+
+    var settings = {
+
+      particles: {
+
+        length: 2000, // maximum amount of particles
+
+        duration: 2, // particle duration in sec
+
+        velocity: 100, // particle velocity in pixels/sec
+
+        effect: -1.3, // play with this for a nice effect
+
+        size: 13, // particle size in pixels
+
+      },
+
+    };
+
+    /*
+
+     * RequestAnimationFrame polyfill by Erik MÃ¶ller
+
+     */
+
+    (function () {var b = 0; var c = ["ms", "moz", "webkit", "o"]; for (var a = 0; a < c.length && !window.requestAnimationFrame; ++a) {window.requestAnimationFrame = window[c[a] + "RequestAnimationFrame"]; window.cancelAnimationFrame = window[c[a] + "CancelAnimationFrame"] || window[c[a] + "CancelRequestAnimationFrame"]} if (!window.requestAnimationFrame) {window.requestAnimationFrame = function (h, e) {var d = new Date().getTime(); var f = Math.max(0, 16 - (d - b)); var g = window.setTimeout(function () {h(d + f)}, f); b = d + f; return g}} if (!window.cancelAnimationFrame) {window.cancelAnimationFrame = function (d) {clearTimeout(d)}} }());
+
+    /*
+
+     * Point class
+
+     */
+
+    var Point = (function () {
+
+      function Point(x, y) {
+
+        this.x = (typeof x !== 'undefined') ? x : 0;
+
+        this.y = (typeof y !== 'undefined') ? y : 0;
+
+      }
+
+      Point.prototype.clone = function () {
+
+        return new Point(this.x, this.y);
+
+      };
+
+      Point.prototype.length = function (length) {
+
+        if (typeof length == 'undefined')
+
+          return Math.sqrt(this.x * this.x + this.y * this.y);
+
+        this.normalize();
+
+        this.x *= length;
+
+        this.y *= length;
+
+        return this;
+
+      };
+
+      Point.prototype.normalize = function () {
+
+        var length = this.length();
+
+        this.x /= length;
+
+        this.y /= length;
+
+        return this;
+
+      };
+
+      return Point;
+
+    })();
+
+    /*
+
+     * Particle class
+
+     */
+
+    var Particle = (function () {
+
+      function Particle() {
+
+        this.position = new Point();
+
+        this.velocity = new Point();
+
+        this.acceleration = new Point();
+
+        this.age = 0;
+
+      }
+
+      Particle.prototype.initialize = function (x, y, dx, dy) {
+
+        this.position.x = x;
+
+        this.position.y = y;
+
+        this.velocity.x = dx;
+
+        this.velocity.y = dy;
+
+        this.acceleration.x = dx * settings.particles.effect;
+
+        this.acceleration.y = dy * settings.particles.effect;
+
+        this.age = 0;
+
+      };
+
+      Particle.prototype.update = function (deltaTime) {
+
+        this.position.x += this.velocity.x * deltaTime;
+
+        this.position.y += this.velocity.y * deltaTime;
+
+        this.velocity.x += this.acceleration.x * deltaTime;
+
+        this.velocity.y += this.acceleration.y * deltaTime;
+
+        this.age += deltaTime;
+
+      };
+
+      Particle.prototype.draw = function (context, image) {
+
+        function ease(t) {
+
+          return (--t) * t * t + 1;
+
+        }
+
+        var size = image.width * ease(this.age / settings.particles.duration);
+
+        context.globalAlpha = 1 - this.age / settings.particles.duration;
+
+        context.drawImage(image, this.position.x - size / 2, this.position.y - size / 2, size, size);
+
+      };
+
+      return Particle;
+
+    })();
+
+    /*
+
+     * ParticlePool class
+
+     */
+
+    var ParticlePool = (function () {
+
+      var particles,
+
+        firstActive = 0,
+
+        firstFree = 0,
+
+        duration = settings.particles.duration;
+
+
+      function ParticlePool(length) {
+
+        // create and populate particle pool
+
+        particles = new Array(length);
+
+        for (var i = 0; i < particles.length; i++)
+
+          particles[i] = new Particle();
+
+      }
+
+      ParticlePool.prototype.add = function (x, y, dx, dy) {
+
+        particles[firstFree].initialize(x, y, dx, dy);
+
+
+        // handle circular queue
+
+        firstFree++;
+
+        if (firstFree == particles.length) firstFree = 0;
+
+        if (firstActive == firstFree) firstActive++;
+
+        if (firstActive == particles.length) firstActive = 0;
+
+      };
+
+      ParticlePool.prototype.update = function (deltaTime) {
+
+        var i;
+
+
+        // update active particles
+
+        if (firstActive < firstFree) {
+
+          for (i = firstActive; i < firstFree; i++)
+
+            particles[i].update(deltaTime);
+
+        }
+
+        if (firstFree < firstActive) {
+
+          for (i = firstActive; i < particles.length; i++)
+
+            particles[i].update(deltaTime);
+
+          for (i = 0; i < firstFree; i++)
+
+            particles[i].update(deltaTime);
+
+        }
+
+
+        // remove inactive particles
+
+        while (particles[firstActive].age >= duration && firstActive != firstFree) {
+
+          firstActive++;
+
+          if (firstActive == particles.length) firstActive = 0;
+
+        }
+
+
+
+      };
+
+      ParticlePool.prototype.draw = function (context, image) {
+
+        // draw active particles
+
+        if (firstActive < firstFree) {
+
+          for (i = firstActive; i < firstFree; i++)
+
+            particles[i].draw(context, image);
+
+        }
+
+        if (firstFree < firstActive) {
+
+          for (i = firstActive; i < particles.length; i++)
+
+            particles[i].draw(context, image);
+
+          for (i = 0; i < firstFree; i++)
+
+            particles[i].draw(context, image);
+
+        }
+
+      };
+
+      return ParticlePool;
+
+    })();
+
+    /*
+
+     * Putting it all together
+
+     */
+
+    (function (canvas) {
+
+      var context = canvas.getContext('2d'),
+
+        particles = new ParticlePool(settings.particles.length),
+
+        particleRate = settings.particles.length / settings.particles.duration, // particles/sec
+
+        time;
+
+
+      // get point on heart with -PI <= t <= PI
+
+      function pointOnHeart(t) {
+
+        return new Point(
+
+          160 * Math.pow(Math.sin(t), 3),
+
+          130 * Math.cos(t) - 50 * Math.cos(2 * t) - 20 * Math.cos(3 * t) - 10 * Math.cos(4 * t) + 25
+
+        );
+
+      }
+
+
+      // creating the particle image using a dummy canvas
+
+      var image = (function () {
+
+        var canvas = document.createElement('canvas'),
+
+          context = canvas.getContext('2d');
+
+        canvas.width = settings.particles.size;
+
+        canvas.height = settings.particles.size;
+
+        // helper function to create the path
+
+        function to(t) {
+
+          var point = pointOnHeart(t);
+
+          point.x = settings.particles.size / 2 + point.x * settings.particles.size / 350;
+
+          point.y = settings.particles.size / 2 - point.y * settings.particles.size / 350;
+
+          return point;
+
+        }
+
+        // create the path
+
+        context.beginPath();
+
+        var t = -Math.PI;
+
+        var point = to(t);
+
+        context.moveTo(point.x, point.y);
+
+        while (t < Math.PI) {
+
+          t += 0.01; // baby steps!
+
+          point = to(t);
+
+          context.lineTo(point.x, point.y);
+
+        }
+
+        context.closePath();
+
+        // create the fill
+
+        context.fillStyle = '#FF5CA4';
+
+        context.fill();
+
+        // create the image
+
+        var image = new Image();
+
+        image.src = canvas.toDataURL();
+
+        return image;
+
+      })();
+
+
+      // render that thing!
+
+      function render() {
+
+        // next animation frame
+
+        requestAnimationFrame(render);
+
+
+        // update time
+
+        var newTime = new Date().getTime() / 1000,
+
+          deltaTime = newTime - (time || newTime);
+
+        time = newTime;
+
+
+        // clear canvas
+
+        context.clearRect(0, 0, canvas.width, canvas.height);
+
+
+        // create new particles
+
+        var amount = particleRate * deltaTime;
+
+        for (var i = 0; i < amount; i++) {
+
+          var pos = pointOnHeart(Math.PI - 2 * Math.PI * Math.random());
+
+          var dir = pos.clone().length(settings.particles.velocity);
+
+          particles.add(canvas.width / 2 + pos.x, canvas.height / 2 - pos.y, dir.x, -dir.y);
+
+        }
+
+
+        // update and draw particles
+
+        particles.update(deltaTime);
+
+        particles.draw(context, image);
+
+      }
+
+
+      // handle (re-)sizing of the canvas
+
+      function onResize() {
+
+        canvas.width = canvas.clientWidth;
+
+        canvas.height = canvas.clientHeight;
+
+      }
+
+      window.onresize = onResize;
+
+
+      // delay rendering bootstrap
+
+      setTimeout(function () {
+
+        onResize();
+
+        render();
+
+      }, 10);
+
+    })(document.getElementById('pinkboard'));
+
+  </script>
+
+</BODY>
+
+
+</HTML>
+
+~äG~äGşù±Œ_l¤îAÆÊò’XFD¡e>`U‰Â[F;ñCÉ}
+•šõ‹ŠP‰[Ç€
+¨ÒPÕÛã‹w¼#×øö‚¬4Y¦nØ‚­4[ö½°=şà5¢ğõ³x[½/š¼ù‘ù‘ù‘ù3äÇ2r@~±‘º7*ÈKb-ÆPõl,£ÕcQY,£J0PxËHg%¬Ò´î;FlÔe‘ŸOäG~äG~äG~äG~äG~äG~äÇÄ¨Œü˜%01’ô‚æ ôƒp1–ªp0&W¯=™9L³+ÍÛúéEOúÕøå¾U£š]b.Õ ç"]öí’-‚ÛËAÈj€ºî©öÅHˆX•¬½‡½¶è£Ş÷õ RùÄ*§b•ÍiØ@Ë‘x5Yê°í÷Ú`E£T‚ò#?ò#?ò#?ò#†üj†T%äÇ*!µÃëUãd’ùÀ¨š*1Px›èvüPrŸBe†9³ŠŠP‰Ûó
+¨ÒP1¥x­3fMÚô™ˆ¬ÖPÖÛ£÷Ç`EsQ‚ò#?ò#?ò#?ò#†üLÀæ€üb#u2nT—Ä*"
+Í`(ó«¨JŞ*ÚJîS¨ÌĞª_T„®¯}ÌÌò*Yi²X+¨ŒC…KVkÀê`<|İh{ƒñğƒå!kF›!ò#?ò#?ò#?ò—XşFÿ/    ÿÿì¹nãFÆ_…`•†ukmDv­Àb†-lÒÒäXd@“Âpd¯İn‘"Í¶Aš=°å©­"…Œ}½Iæ}H„,J4uğ«HÎpÎï‡ùÿHJ/èÚÕ®xmèfúöŞOW»gcÁÏ¹4½†nó#b‹Ã›†^‘;]Ó"=¾4u;‹
+‡®ßñHT¸öLáí«]f½	¨Mh(ªº|í¹?ªË">#ôş¼c*Néò\ºö	¯±Pk–.EÅ2©IÎÍÇåÈªàÖd½¼œÊ<ÛåaxT¬©Â›ığiÚö¨Ôö¨j±uQmdŒÆtTe¨&-Óg§]Ïe²F2šGç¤çñù"ïL‹‰¡É¦Ë…‚êOÜ0d£ªVÑ‡‡ÉbÖoüì«†^İ)‹ªØu—×l¿3U]—G„vˆjÿ±,³<9Ÿ“…Äğ¹Â«ƒ¡š‡	ë¥IUÚT§à §d‡—gàù²È@áM¡òª:3ó,AüpÎøhö*rP*mV‚Š•J­(B‹üš-†Ò¾Öê8ÃşŸÚ–v÷Áå;]°¶Òaëíİ{ŸsÕXùóa%¯A€°z„ÕAs¿É±ji‡×€
+P¥Õ¯F»õƒ>ıÈÑ2†·_\°µa·jiE ?ä‡üòC~Èù•üÕ‚ìhä‡Y³hVÆ1LZfÑìkÑº˜EÁÀÊ›EU9(•–àbf=úyDhyA²»Ãş_¦æ¾i[ÚÛÁgh­tĞ:ädYû‚-cØÿ{£°€+K¸Ú­-£%nÍøşï÷O~l­tØÊ—q”ËÛ6Ä!?ä‡üòC~ÈŸ®üëb¥(?Œ£50¢ú(	™IÙt,“Â·ºÛUó°€‘tõäwşúøH÷êrÀ*mÖU/™E•]I½<Ò•}¥8A	} ”pÜ©¡ûÿt·Ú-ò]äåğ¾ãë÷Şõğö¿9KrßÀò	X–Ë'c­	¸¸Šà‚üòC~Èù!?ä‘?™iµòÃ´ZÓj*†Ë{Û)«Ğ~¥‘ÜñSió­>ø^†ª¯¼yT’ƒRi	._ğÁ²UEhıŸå[`kœ­#­íô†·ßØ¢_Z\‡W–pµ]ñ¡Å#Í|äÛöœÏS€,5A–öÚw„Eä>_ +Š"¬ ?ä‡üòC~ÈùcäÇ'ñr ¿Ø(İiLGU†j&V¡qaÁ$Wı%Âe9(•–àòüUEhy±şÕX«q¬¢@«dğ,> ‚¡¶ÀÖBÇJü¶Ów€¢CVòC~Èù!?ä‡ü1òÃÊüb£t§1UªI8CX…Æ1„3gh\õ—cTä TZ‚Ë„ğW!8CÀjsƒø™}otåƒ®§¼•HaYvĞÔ˜3ì¿×,gxûU¼ÿh>/"¼ ?ä‡üòC~Èùcä‡a”ùÅFéNc:ª2T“0Œ¦c˜´4£i«ÏºF¡úÊFU9(•–àòe="ûyDh‰Pş—~ó#pµ®r`¬LÁÊË×À€U–XåÑƒÌã-â„òC~Èù!?äOYşu1‰R”?·&‘Øœyõwâf¥”Ğ7àg‹Ó˜ˆL‡˜|ÚOÈ9¡Ä·È™ªSºFw]»¡Ó_ìºj·Û9}(×^•%Uß/îvÄ~@]>¯İ3};´Ì.‰J™¢mb¹$/ˆièÕºäCÑwŸ)@¾ÏS¼Ï;&%KÈ†8ZbZF´Õ£Ù²ë€º¶¨ØõÉ±Ë,Şér-š75Er÷,°¯å/Ò»àcÙû  ÿÿ PK     ! Ö¦C´  ß     word/footnotes.xml¤”Ínã Çï+õ,î	¸j«ÊŠSiµêµ@1QÍoŞ~ÇNœx»U”Ö0ÃÌoşÃwll´!gé\°DƒÂÂÀ:go¯³[–„(¡5‚ÎÙVv·¼øµh³1Fb@ÈZ§rVÅè2Îƒª´•anò°Œs…–cY¥y‹¾à—"ı—ó¨t”ğ^ÂF¶ÇÙÿiè4Ğf‰ŞÊHK¿æVúÆÍˆîd4ï¦6qKlq3`0g‡l˜u!ÙNĞ~"ü9yw!+TÕûŒÜëš4 „Ê¸c?¥Ñf5@6§ŠØØzğk]z5­+/[šÀsä» [ï”Ÿ&¦âŒtˆCÄ9şÍ9(±ÒÀ1ñft¸éõ÷ —Ÿn=­9w¤™i´'ø8°º«ıÖ¾ÉãÒÂ41/•tt­ÊÖ€^¾×¤ˆZ–Ğ©'İoÍ–£''i³¸uä´“^FôŒL¦ÈÙ,í-éM+s&„ø-®n¯;Ş´Ò¥lê8Úé"|7p|¹à½F×Cê/e(„h éoÿËgIbŠ¢/É§Ôaù  ÿÿ PK     ! ¸R|î³  Ù     word/endnotes.xml¤”ÛnÛ0†ïìİ'’‹¶(Œ8¶`Co{x U–c¡)Hr¼¼ıhÇ³®ÒúFGòã/QÔêş­“öÁ ä,]
+–hPXØæìåù×â%!J(d s¶×İ¯¿[µ™†0êBÖ:•³*F—qT¥­Kk”Ç€e\*´ËÒ(Í[ô¿©èGÎ£Ò!P¼Ÿv2°gÿ§¡Ó@›%z+#Mı–[éß· º“Ñ¼šÚÄ=±ÅíˆÁœ5²±8
+ê\²ƒ ¡=ü%q.TÕûˆÜëš4 „Ê¸é_¥Ñf5Bvç±³õh×ºôz^6^¶ÔMÀKä'[”Ÿ'¦â‚Œtˆ£Ç%ş9*±ÒÀøKWsr¹éÍç Wïn;/9¿=6n¢™y´x;²ºÊşkHòéÑÂ<1O•tTVe[@/_kRD)KèÖ“îY³õôã$m÷‚vÒËˆÑ’)r¶H{;GSúÑŠÇœ	!~ˆë»›Î¢_ÚèR6u<Ùé<|×q|½âıµ®o‡È‰PÑ@Ó—şÓ{AbÉg´Mã°ş  ÿÿ PK     !  “  .     word/header1.xmlÜWOo#5¿#ñ¬¹§É$mZE›®š”m*v»¨iqtfœ«3öÈv’†ÛÂÓ8‚W¸€8æÄ÷È7áÙù³¡Û Uè!?¿÷{Ïïç÷ì>{~GhL„¤œµ÷ æ Â<îS´Û›•I…™#ÎHÛ™é<?ıø£g“VèÖL¶&‰×vB¥’Vµ*½ÄXÄÔ\ò¡:ğx\åÃ!õHuÂ…_­×ÜšùJ÷ˆ”àª‹ÙK'…‹×ÑxB,¹ˆ±‚©ª1w£¤è	Vt@#ª¦€]kf0¼íŒk¥•< mÒ²¥Cf!â×šœso¦ŒÇª ÄÀ™iRlã±h°f ãm›ÇQ¦7IÜÃİ88xCøğ}kG6òíˆníŒhˆÜâ!!,ûÌ"‰1e…ãG¥¦”\÷èÃ ê« I°9‚’î†vÉîr,]Ô€•’\ŞšÜ-˜~ˆ¨ÀØk]Œ<ˆ " AÖ‘>ÖÎ)45ˆÒá3‘~|&ú„@Ç‚é4+<RÜ©¦Ë/ñ”T¾6¤÷ÄÏ»$Š^aƒ‘¡ÖZFòï±Õ4ß»\]ÅÒn9¿½1Àş´Ñ
+©®y†áòÌ,vy4ŠYi}IÀx¯-8Ÿ½ÉfyyR.õõg #`ØÈ›'FwEÜlÔÜâÃc+¶È °
+×„­÷Õ<o|Òp-3Â:÷0SıºpjšŠ•g³YÊš	i=İãWD$ËŸ põ•²æuàÜÀMe&<É”¬BJä²pÀ•âñš8£µ,ÕA>ÌÌ­]­î<“!EÊpİ©™œØ½Şˆ?]Ì~`ºéuû¨˜~1ÿ™Æ0¿ÉN®®şø:FáböÎCõZ½*zhü³>zşn1û¹MÆ¶PnÛ:åûÄk’öÕ4ÊOi`ı\:I#°*âgJ‚
+–…v}Cc"Ñ™ kc¦ı(ó3IñÆÅğŒÉÍf\ÏòË,¢£f&éêJ2Í—P3–º?A›’ê-¼½ˆ_wt(úT6¦•7W«ÛZÌ¾ß¿}•7p‰>í½¿EËÅì«ÛGtsë ÿmw¨/u‡™ĞL'½œ‹œ76äÜÊ¶°ÅtåÎøš¿şbö-:~?—z°ªÿáÛ`?NE)Mv(8¨ç¬XÙ*Çût½ÂÚYD–)Y \ïß(­ã¥Òz‚^9X©³AAèF>Ÿ¸¹—K¼s»˜}w‰úó·W{Û´ŸàÌ™v¾Â'<Nàş›‡Bº˜}ÃZÌ~A,˜ÿ8E©pş<Übú©®éÛYõ`ÿï}tÛYˆ¥z)5¤­½'ôÅé_   ÿÿ PK     !  “  .     word/header2.xmlÜWOo#5¿#ñ¬¹§É$mZE›®š”m*v»¨iqtfœ«3öÈv’†ÛÂÓ8‚W¸€8æÄ÷È7áÙù³¡Û Uè!?¿÷{Ïïç÷ì>{~GhL„¤œµ÷ æ Â<îS´Û›•I…™#ÎHÛ™é<?ıø£g“VèÖL¶&‰×vB¥’Vµ*½ÄXÄÔ\ò¡:ğx\åÃ!õHuÂ…_­×ÜšùJ÷ˆ”àª‹ÙK'…‹×ÑxB,¹ˆ±‚©ª1w£¤è	Vt@#ª¦€]kf0¼íŒk¥•< mÒ²¥Cf!â×šœso¦ŒÇª ÄÀ™iRlã±h°f ãm›ÇQ¦7IÜÃİ88xCøğ}kG6òíˆníŒhˆÜâ!!,ûÌ"‰1e…ãG¥¦”\÷èÃ ê« I°9‚’î†vÉîr,]Ô€•’\ŞšÜ-˜~ˆ¨ÀØk]Œ<ˆ " AÖ‘>ÖÎ)45ˆÒá3‘~|&ú„@Ç‚é4+<RÜ©¦Ë/ñ”T¾6¤÷ÄÏ»$Š^aƒ‘¡ÖZFòï±Õ4ß»\]ÅÒn9¿½1Àş´Ñ
+©®y†áòÌ,vy4ŠYi}IÀx¯-8Ÿ½ÉfyyR.õõg #`ØÈ›'FwEÜlÔÜâÃc+¶È °
+×„­÷Õ<o|Òp-3Â:÷0SıºpjšŠ•g³YÊš	i=İãWD$ËŸ põ•²æuàÜÀMe&<É”¬BJä²pÀ•âñš8£µ,ÕA>ÌÌ­]­î<“!EÊpİ©™œØ½Şˆ?]Ì~`ºéuû¨˜~1ÿ™Æ0¿ÉN®®şø:FáböÎCõZ½*zhü³>zşn1û¹MÆ¶PnÛ:åûÄk’öÕ4ÊOi`ı\:I#°*âgJ‚
+–…v}Cc"Ñ™ kc¦ı(ó3IñÆÅğŒÉÍf\ÏòË,¢£f&éêJ2Í—P3–º?A›’ê-¼½ˆ_wt(úT6¦•7W«ÛZÌ¾ß¿}•7p‰>í½¿EËÅì«ÛGtsë ÿmw¨/u‡™ĞL'½œ‹œ76äÜÊ¶°ÅtåÎøš¿şbö-:~?—z°ªÿáÛ`?NE)Mv(8¨ç¬XÙ*Çût½ÂÚYD–)Y \ïß(­ã¥Òz‚^9X©³AAèF>Ÿ¸¹—K¼s»˜}w‰úó·W{Û´ŸàÌ™v¾Â'<Nàş›‡Bº˜}ÃZÌ~A,˜ÿ8E©pş<Übú©®éÛYõ`ÿï}tÛYˆ¥z)5¤­½'ôÅé_   ÿÿ PK     ! ¨æ£&  Ú     word/theme/theme1.xmlìYO‹7¿úÄÜíÿYâöØNÚì&aw“’£<–=Š5##É»1!P’c¡Pš–è­‡Ò6@/é§Ù6¥M!_¡’Æcl¹›mva)±Á#½ù½§ŸŞ“Şy._¹pˆÇ4i:¥K®PÒNFMçöA¯Pw 0@BÔtfˆ;W¶?üà2ÜŠú	ß‚M'b²U,òPŠ!¿D'(‘÷†”ÅPÈ.I»1)–]·ZŒ!NÀXš½9âeÒÙÎŒw‰üIW‚°}e;—Ô…³Q? BÒt\ıqŠÛ—‹ ë¸şÌqsÀ`\^ÃyïU[{@Ä:®[ëV»Õ…=€a(g±>¶ßn´;ş›¥M‹íN­S)øœıÊ¾å«¯× ´éY|,}–¥Mßâ“Z9ğ¼¥Íê¾æ¶:^ÍÀkPDp2^ _­Ùl!%×¬ğ†ïõjå9|‰*æVNªŸˆMë(†÷(ëI€.8b6ACJ\ 	î3vğ(˜À„r)vËnÏ­È_õõtK{n!˜Ó~…ŸRAÍğá‰h:K¼“3ğæåo^>Ç^?úåøñããG?[´®Ád”×zıı?ıüõü»×O¾²ãyÿûOŸıöë—v È_}ıìÏ^}óùŸ?<±À[öóğ#n #°Gc91Ë ¨ÏN§qAœ×h%#¨t,è®ˆô$Ğ‚k#Óƒw–ÉÒ¼:½gŞØT`ğzÀ]JI›2ëœ®«±ò^˜&#ûàlšÇíAxh;X‰ow:‘{ÛL2hŞ"2äp„$€ºGÇYÔîbløu‡Œr:à.mˆ­.9À}c5-•®áXÆef#(ãmøf÷hSb3ßA‡&Rî
+Hl&1ÜxNŒ­ŒaLòÈ("Éı‡s!#=B„‚î qnÓ¹Éfİë25ÙÃ¾Kf±‰dmÈHiÙ¡ã ‚ñÄÊ'QûË%
+Á-*¬$¨¹CT_Æ&Ã}##Ü'ïíÛ2+Ûˆº3e¶-¨¹gd‘6^\©1NN,+	Û?mI°*ü[I°*¼MIIøÕ·Oí9ûBƒÃÖİ¸Z6áV@Ù _ü¼ßÓä’[Í}Ÿöß§ıÿ}Úß´ŸÏ>Ù/ó»><dGm&Şx^bBöÅŒ ®+—Óô¤Pw´Òâx2‰ds>œ1¨Û€Qñ	Ñ~'r˜’aÄç¦GL(—™_‹­¶Õ2wé •–JÙ	X*@±”ËÊ‘Ée%©´Z[ıæuo¤ß¥{¹ÁL‰Z&<„Ù™°hXXÔ•ù,ôe¹ÿ T”ø^ÊH®7HĞ@Åin” =ŠÔXê3û&Ïš>([æÚPÄÏ&ì‰ÜÚ3IäÖdhU|Æo,ãkĞS®X§Q«Ÿ{àUzYÉ$1{àHîÆŠ/m†pÒt†òyS6ã‰4ÎeFÕœÿK¢™0.:G)LßJ¹ÆX åÒÏ‚$KB¥rMÍò"1j¸ÄGú’!eè7H–]y/5b½û`Õ¡SIz?>™²=(½ã×JÊkÌÅÂ…ÌrÙÌGó½fùgUÉ!™Dp^?ò©;…ëö‚C¼¦·:³?ŸA¤"óÎ5öd¥tÏ.²â†r¡j¤=Aœ_IÏ±Z&vƒUš›W“Y#Kf›ÊÀ»güµå`5ÅØBm)5©aùÏ·Xš›ŠÀ¹¦ûÕ%¬*@öH©{ko:hÿ4Õ‘OªS"¸¶îËãAıæ-ÍòË}¦7®ßò‚²Üºß-xÏ-ÔıV¥ĞòıJ©ë—ÜN»üPzHDqÉOÇîÉ£™Í_ähùÚËœ8{Â¾Ò¸Hõ#pQ+ë—9¥òæ—9 K7=¨–{J£]-4*­^Áë´ë…FPm:Õ Öéu¿Şè=tÀ¡{­JàU»õBµ¯ê*úõF¡æ•Ë-¯Öªw½ÖÃyàäÌ³kæ^Íkû   ÿÿ PK     ! ²ïvŒ  Í     word/settings.xml´WÛnÛ8}_`ÿÁĞó:–/ÉFb×MŠÜP%ûNIc›/Â²ë~}‡¤hYNd»è“Å3wòp†~ÿá›½ áZÍ’áIšô@ºäj5KıwIÏX¦J&´‚Y²“|8ÿó÷Û©kIÍôÈ…2SYÌ’µµÕt00Å$3'ºEÂ¥FÉ,-q5Ÿêª_hY1Ës.¸İFiz–4nô,©QM}ÉÔF/­3™êå’ĞüD|KÜ`2×E-AYq€ (­ÌšW&z“¿ê„ëèdóZ)¢Şv˜¾¡Ü­Æroñ–ôœA…º cè€¤ˆ	rÕ<s´}B±›½+2¦şë0óÓÿæ`täÀˆ·TD×<G†'M²˜^­”F–b%•Ó£Œ’s¢åw­eo;­ :âtš&'@z÷Äu­˜¸R!ÿtÎ,ü£Ê.Á£ s(³± ZYãAcwî™‚…÷°àÂRÈ£šÆ‹t˜Ğ‚	‘9=C¸uQ«e„Rû(Ãä]›+õh AÖÀÜeìh©šÒÂcÔº½è %G(lÈÒ]Õ;õµV1¡çÂ{†l…¬Z¿¬r#¿¨ñà²Ø-€a+mP««ñe·,o¸áÇ%0··Š6Ê£·L‰?‡–¬–"fä2Àß£(Ö·Ú^îª58ûV…Ó+‘m)ògäå¥Fş•‰¬bÑÇpï£UşĞòâUn*Áv­Ïykû‰:ì.Ztõ£Û—´ÇÅ+n®¸2´§wÈ	ôzÅš± =kÒ¼ TP‹èÍõ]¤¶p_«ÂÖıÁÿRk«´…{<\‘/gIØUj`_ÈàØTùlqä§‹F7Ã0 Ú¯,G~â@(d?@nt	,5ò·7%Ï8‚§!«Ÿ¢¦€´ÅàyíIèAÆ¿»>ñ….5'a#=ƒ× öRä;ê»
+ÀlM'ø›‚yš-¯n8¢Æ+UR‡úmÁør	H8İÏºÉõÖï³ëÔ§ÿgÜÁ!è…Sšøñ•»¿éÙ|üiÜdê¤­$ı˜NŞ5ôèJ^¶™_LÆóÈé&ªœº×cvørêÉ`qÁdœõnÜûaà4r|úÈU”ç@ƒ
+%YGa¿FÒ¼YĞÍŸ€ôMfKÿ-Bï8ÒÀŸ¢ÔZ¿ì}¹9
+øu]é–†D FTN&%WöšËˆ›:Ï¢•¢~ ªUy·A¿OíöĞp #öWìšµMTÿ1k¨$0s4 NXUMùj8K_­m/´*é™éùjÔÈF^6
+2¿`…«Œ´›Eì@o±q‹M"6i±Óˆ¶ØYÄÎüH§{Œ‚«'"vütøR¡·P^¶ògĞÁ4¸R…¨K 6”º 7CfY| ¬Yó0‰}: Í¸4½Í¾ÑÃJnéq_ñR²oî4:sŞmMº¶]'sÊU×CÉ,‹7®cìoÀQ.MîŸü»ŠşĞô^5s
+N,Îv2oçÕI¨WpCİ£¢Ñf5FÙ_Í‹ÿCÎ   ÿÿ PK     ! j	êWE  í€     word/styles.xmlÌßw›¸Çßï9û?pü´÷¡ÍÏ&mÎ¦{Ò´¹É¹mš­ÓöY9Ö/à¦é_õ,<3BMw¶10¤ùjFÀæ?¿giô%ãùédïùî$¢yÌ–ßN>ß^<{9‰ÊŠä	IyNO'´œüùú·ıñpRV)-#ÈË“,>,ªjy²³SÆš‘ò9_Ò\ìœó"#•øXÜíd¤¸_-ŸÅ<[’ŠÍXÊªÇıİİ£‰ÁC(|>g1}ËãUFóJÙï4D—¶,kÚÃÚ/’eÁcZ–¢ÓYªyayƒÙ; ŒÅ/ù¼z.:cZ¤PÂ|oWı•¥kÀ`¿dñÉÕ]Î2K…÷EK"›¼îOxü–ÎÉ*­Jù±¸)ÌGóIısÁóªŒNH3v:¹e™Pìš>DŸxFDN()«³’‘Î‹³¼ì6‹K¸yG2%ùØÿ¤§š?û<mŸ¤Ù4c‰ “âÙôLî˜6ë­,›Oú¨nÕÅ˜ê¡(öÒù{ßÓdZ‰§“]y*±ñóÕMÁx!†ÛéäÕ+³qJ3vÉ’„æÖù‚%ôë‚æŸKš¬·ÿu¡†ŒÙóU.ş>8ŞSR¤eòî{L—r Š½9ÉÄ©¯¥A*^±õÉ•ùÿjØñY—ı‚…ÑŞ&B5…Ø—¥ÕÛnæj£ïê(Ô‰êD‡Ou¢Ou¢£§:ÑñSèåSHa~æ‰XĞï:ái uÇh#ØĞG,¡9PAs‘€æ8:šãÇhc˜"8]£ĞìÑŞÏİ>Gøq·O	~Üí3€w{Â÷ãnÏï~ÜíéÜ»={ûq·'k<W/µ¢+fy5:ÊæœW9¯hTÑïãi$,Uš„áÉIA: £3›™ˆGÓb¢>o!*HıçóJVSŸGsv·*DE;¶á4ÿFSQ[F$I/ ° ÕªpxÄgLtNQáÓ;4e9òU606—ä.‹æI`÷ÕÄ I¡ĞdU-d° ƒ:#qÁÇ7“`ùá=+ÇûJB¢7«4¥X×a†˜b¯f|i 0ã+…_Xš…r‘¡ò”¡r˜¡ò›Ÿ¡üfhüfhüfhãıvËªT¥x{Õ±7üÚİyÊåÅäÑí˜²»œˆÀøéÆ\3nHAî
+²\DòÒp7Öî3ö<oxòİ†˜ÓR¨u½"ç¢×,_wh‹*¸^ ğjx¬á±b™,h—aê™éjVu­"
+Ú)IWzA;>ÚH5~„­à‚e°0èÆÁ×r9+å‘ùÖ­ß°5k|Xmf¥ Í3È ­Ly|&_>.i!Ê²ûÑ¤¦ü&áˆÓªàz¬Ù!¿¯$òï²å‚”LÕJ-Äğ©¾¾} ËÑºI	ËÃèöîYFX…[A\Ş~xİò¥,3¥cÂ ßğªâY0¦¹øûW:ûw˜‰"8ÔÛ³@—‡ìœ˜d4‰'Hb™ÉrdU¼ÿÒÇ'E†vSPıäGE§$[êEG€ØyñAäŸ «!ÅûB
+&¯…
+ªÛ 0ë²a¹šıMãñ©îšGA®}\Uêú£Zê*ëp¸ñË„nüA©)¦9~t¶…ßÙ.TgÏSR–ÌyÕ›ª»5/tÇ†ÇS^ÌWi8ÖÀ`¬Á\ÈÓU–—!{¬x;¬x¡ûpÈ(^€KrŠ÷Ÿ‚%ÁÄP°PJ(X(,”
+T€ñOèX°ñéX°ñÏêhX %€5Î‚NÿîòX°PãLÁB35Î,Ô8;xÑù\,‚ÃM12Ô˜³á&š¼¢Ù’¤x„|—Ò;à©¦İ|.¿Àsıw ¤¼F\lk\(‘¿ÒY°¦IVÈv¸"JÒ”ó@×ÖÖ²l?»¶ÍìvA³ñeôMJbºàiBGŸÜ¶¢^.Il.ÓƒÛ}ƒ.{¾gw‹*š.š«ı6æhw«e]°·Ì¶Ÿ°ËçGû=fhÂVYİPøeŠ£ƒáÆjD·Œ·¯W-Ë-á9¶[®WÉ-Ëã–ğœ/Zª8mYöÅÃ[RÜw„ã¾ñÓÔxÁwÜ7ŠãÎÓö¤Æ²k÷¢V¨Dgq,ï@u†ÅŒÛ~Xğ¸í1Qä¦`ÂÉMWnD_€}¢ß˜œÙ1IS¯yzä}µˆ”9ÿZq}İ¾uÃiø—º®ÄÂ)/iÔÉ9~ãª•eÜ~œnÜˆÁyÇœ€ÜˆA™ÈiJInÊàÜäFNRn:[Á—­ =.[A{Ÿl)>ÙjÄ*À¼p#Ğ
+è@±Rp#P
+Ì½RĞ
+è@…t Â.P¡=.P¡½O BŠO B
+:P!¨Tˆ@*D Õsmï4÷
+THA*D "ĞªÖ‹#ÚãÚû*¤ø*¤ "Ğ
+è@…t B:P!¨ÀÜ+P!¨Tˆ@ªşª¡ B{\ B{Ÿ@…Ÿ@…t B:P!¨Tˆ@*D ˜{*¤ "Ğ
+è@U7G*´Ç*´÷	THñ	THA*D "Ğ
+è@…t B*P¹W B
+:P!¨Ñ7>Í-J×cö{ø«Î'ö‡ßº2úd•ÛFGÕ­r³†áç÷QçT½1Âf)ãêµã¶ºÍUD n|~<ïÿ†Mù£Kæ»ê)€µ×Tû†¼m	Š¼Ã¾‘n[‚Uça_öµ-Á4xØ—tU\Ö¥ˆé÷¥ËxÏaŞ—­-sèâ¾mB÷efË:¸/[†/"™œ7­_ôÓQó|) ôG‹pì&ôK¨Ua`ÍMª›0TF7¥§ƒÖB+ìFùIÃ+µ º	X©!ÁKj€ñ—¢¼¥†(?©abÄJ	X©ı“³›à%5ÀøKQŞRC”ŸÔp*ÃJ	X©!+õÈ	Ù‰ñ—¢¼¥†(?©áâ+5$`¥†¬Ôà%5ÀøKQŞRC”ŸÔ JFK	X©!+5$xI0şRC”·ÔÕ'µºŠÒ’¥°e[„Y†¸	Ù2Ä%gËĞ£Z²¬=«%‹àY-A­jÍqÕ’-š›0T=7a¨ŒnJO'/¬…VØò“W-uIí¨nVj\µä”W-õJ«–z¥ÆUKn©qÕR—Ô¸j©Kjÿäì&xI«–z¥ÆUK½Rãª%·Ô¸j©Kj\µÔ%5®Zê’zä„ìÄøK«–z¥ÆUKn©qÕR—Ô¸j©Kj\µÔ%5®ZrJ«–z¥ÆUK½Rãª%·Ô¸j©Kj\µÔ%5®Zê’W-9¥ÆUK½Rãª¥^©ÕÒÎCëL’­Ş
+&®—Tş·õ…™Dÿ©¹	¨¼Jš%IcÙ’È¼<ÊlV67ÕßKıj+²ª¸ü#}û®¶0Zï¹níÙilÍÛ±Êõş}sƒ®üq.ß"em³ŞK¥¼¥‹M§Ì]Rı~(»[ë×:©3ÎHI“RĞé\ş$à0gÜSº¼‡«mÇµ•”ÚŠëŸzÿ-íwÊæ+ÃÎ
+¦¿ ½~‡W³É¼¬ù,_
+¦?è¾éÿŸ—Æ·õ‰ë4a{»Oc¼½ïô¶9ãOõv¡.8œ­äÎfêh¦<4²ïÎ¾›ÛÖ?¡ï°›µŠO>¦öLº¶Ç”Ş6Ò¯‡N¿šœñ$~U¿ÚÎÙMıNÁ®nš'~a¢ªñOëü‘³óf!ò;¯ÜßÛùVj5n¥Vµm¤‹.2+­_è¢ºıIçù—\¾°²v¬&ñX[dê©?ê>:¼~Ğ1¡ém#½şÒéu“î~¡×•îC½~ÙévµµíwµÉrüe¿çëmÏëmÛ=/„ëcós›µ©ùÙüæ{ßêGó75qü¶¾jØzÍ\m~ëgçôq­çätûí®ä½§Íjß»¨ÖË|W_™ºe[E{f©V]üq•'ğ`Şpª[š|'%öŸÓ4ı@ôÑ|é>4¥s9lÅŞ½]õ+Kûgúƒöjæì´£?öı
+!óÈ£³†‘åS‡»Õó·c==`,´Õ—w¾@ctm§vuå{Ø Õ}Ã‹„ª Ôê*¤|†iŞ9Ë?daÖ¼EW™âoõ_K}OëflxÚ×cÇÓœ‰D–ĞË±€/¾ =˜m)|Â®k/"èànsOŠ"[okóF¼®1=d>4ó—ˆ$í32«2óŸø¸äbF:<Ø7:YÇè¢¯>äå‘~æVöQñêùÛÕız¾Í®š·ömëê?²Kæ¸ÔUmö«õë\Ûz'_°a(íÎÅt>târ,V¦ôÓèó•l÷z±bo5‹{“\¬4ŸõùƒT¥­åI¼*E Nå›SÏ¦ú|­´áàÎ…NŸ»;]ıOôkıWùúÿ   ÿÿ PK     ! ¶Ş,ì   ¾     word/webSettings.xml”ÑÁNÃ0 Ğ;ÿPå¾¦ ¡jİ.‰3ğiê¶Ñâ8Š3Êş«ŒqØe»Ù²ıdË›İ7úâ;
+­ªËJ,õ.Œ­úüx]=«‚³	½ñ UG`µÛŞßmæf†îr–N.D	Ü mÕ”sl´f;.)Bâ@	M–4MÚâÊF“]ç¼ËG½®ª'ubÒ5
+ƒ³ğBö€ò2¯x)ğä"ÿió5ÚL©‰,0Ë=è=4.œ™úáBg1¹”cN-”Œ×Õ¡ÿoÖg mó6J¦óòÙ¤Léí   ÿÿ PK     ! øèĞ”ã  î   docProps/app.xml ¢(                                                                                                                                                                                                                                                                  œSMo!½WêXq±ÄM,LT9ªrhKŞ$ç);k£²€€XI}‡İx‹ÛÊéÍ7ˆ›×ÎTQ;»b³É”Uh•k´İ­ØcıåìŠU1mÀ8‹+ö†‘İÈÄ&8!iŒQØ¸bû”ü’ó¨öØAœPØR¤u¡ƒDfØq×¶Zá­S/ÚÄçÓé‚ãkBÛ`sæGB60.éI§²¾øT¿yâ“¢ÆÎH(¿å›FğÑ!j—ÀÔºC9%÷hˆì0Ê¹àÏ.4Q^_/ Xï!€JÔ<y¹¸:¼pˆÏŞ­ Q_å½VÁE×¦ê¡[eÁËAlQ½Ş²Ò_µ%Ÿi°à÷QÎÎ³ÂÑ[×T¼lÁDü·CÜ!äÁn@g…‡´< J.TQÿ¤ÑÎYõ"æ–­Ø‚›Ø6=6>¦ kqvË´ë9ëœ&öF¯ğ©ºş…øĞRmébg¥Ø^Ã µS*;¾ñë=XnŒhí:–šÎGDMÿ}ínóÂ¼·õÔYìÂ³Nû­EsZĞ)·¢‰-y±¡1sâª
+&?@wí›cÎß¼gOÃ÷•³ËÉ”N¿XG-Çø¯ä/   ÿÿ PK     ! ºDıÓb  ×   docProps/core.xml ¢(                                                                                                                                                                                                                                                                  œRËNÃ0¼#ñ‘ï‰“”V(JR	POTB¢ÄÍØÛÖ4~Èv›æïq’6%¨'n;;³£İ±óùQTÁŒåJ(‰b€¤Šq¹)ĞÛjŞ£À:"©”„5`Ñ¼¼½É©Î¨2ğb”ã8ØÀ;I›Q] ­s:ÃØÒ-b#¯\+#ˆóĞl°&tG6€Ó8a0ânC=8¢“%£ƒ¥Ş›ª3`C¤³8‰|Ñ:0Â^è˜_JÁ]£áªôLê£åƒ°®ë¨tR¿‚?–Ï¯İ©!—mVP™3š9î*(s|)}e÷_ß@]ß€¯©â”é‰ø˜wĞÔÊ0ë™ò2–®¼~nÔğêŠX·ô¯¹æÀšŞáoÏ·xûÊ¤S0?ÅÙï,ğ1d}hgæ}òø´Z 2Ó4Lâ0­’iv7Íâø³]i41§şíx6èoÅò  ÿÿ PK     ! Móî>  e	     word/fontTable.xmlÔ•ÑnÚ0†ï'í"ß—8!”5T”­ÒÔ‹îŞ'±Û‘mÈxû;	°!$`k¥!9¿ÿsüÉ>¹»ÿ%Ê`Í´áJ¦(êa0IÕ’Ë<E¯óÙÕ
+Œ%rIJ%YŠ6Ì ûñçOwõ(SÒš ÖK34E…µÕ(-˜ ¦§*&a2SZ¯:Ñ?WÕU¢"–/xÉí&Œ1¾F­>ÅEe§ì‹¢+Á¤õëCÍJpTÒ¼2[}Š[­ô²ÒŠ2c`Ï¢lüárk%F‚S­ŒÊl6ÓVä­`y„ıH”;ƒÁyñÖ@ĞÑS.•&‹àC%˜¡qK?¨G’˜˜sÁLğÌêàE	"}@E¤2,‚˜5)S„cx®qpÿF	
+] -ˆ6Ì™5¸‘3"x¹éTí}ıDÅ--:}M4wÅ5S†ç0±2œ¢GŒq<yœ¡F‰R4ex“D­»\şwÛ*ı­‚B½fŞ‡zŸmäD&PVy„ÃpH<æ9‡ƒ©¹1phêÿƒCÿ=8ô~Hw8<	RÚg»’§j¥9ÓîØ´:$5Œ»$»ToFªÍÑqÙßáß¤:å8)`u©¯	Õàÿ Š<òÓQ}g¹bÁëÓÑûåú‹»aÍ-ë_†B*;×+6ßTìãœ¢))ùBóàÏ{„ÏzoÛyüèmûÏÄ•ï÷áÄ	xøpèöÌşÓò8JÂ”÷"á:1÷;±#1™n•‰îõ/$Úÿ  ÿÿ PK-      ! |cœ@  (                   [Content_Types].xmlPK-      ! ‘·ï   N               ¸  _rels/.relsPK-      ! j<d"  9               Ø  word/_rels/document.xml.relsPK-      ! î†•QI&  ½              <	  word/document.xmlPK-      ! Ö¦C´  ß               ´/  word/footnotes.xmlPK-      ! ¸R|î³  Ù               ˜1  word/endnotes.xmlPK-      !  “  .               z3  word/header1.xmlPK-      !  “  .               ¬7  word/header2.xmlPK-      ! ¨æ£&  Ú               Ş;  word/theme/theme1.xmlPK-      ! ²ïvŒ  Í               'B  word/settings.xmlPK-      ! j	êWE  í€               âF  word/styles.xmlPK-      ! ¶Ş,ì   ¾               TT  word/webSettings.xmlPK-      ! øèĞ”ã  î               rU  docProps/app.xmlPK-      ! ºDıÓb  ×               ‹X  docProps/core.xmlPK-      ! Móî>  e	               $[  word/fontTable.xmlPK      ¼  ’]    
